@@ -19,5 +19,11 @@
 ├── notebooks
 │   └── plots_for_paper.ipynb           # Plots for the paper, and also contains
 │                                       # good examples for getting acquainted 
-|                                       # with the code.
+│                                       # with the code 
 ```
+
+### Dependences
+* Python 3
+* matplotlib
+* numpy
+* scipy
