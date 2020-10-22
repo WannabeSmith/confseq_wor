@@ -22,8 +22,8 @@
 │                                       # with the code 
 ```
 
-### Dependences
+### Dependencies
 * Python 3
-* matplotlib
-* numpy
-* scipy
+  * matplotlib
+  * numpy
+  * scipy
