@@ -364,33 +364,55 @@ def plot_power(martingale_dict, data, T_true,
              label="$\\alpha = " + str(alpha) + "$",
              color="grey")
 
-# The function which gets the stopping time.
-def get_stopping_time_lambda(mart_closure, data, alpha):
+def stopping_times(martingale_dict, data,
+                   nsim=100, alpha=0.05,
+                   num_proc=1):
     '''
-    Get the stopping time given a martingale function,
-    the data, and a confidence level.
+    Get stopping times 
 
     Parameters
     ----------
-    mart_closure, ([Real] -> [Real])
-        A function which takes the array-like of data
-        and produces the martingale sequence
-    data, array-like of reals
-        The observed data
-    alpha, real between 0 and 1
-        Confidence level
-
-    Returns
-    -------
-    stopping_time, integer
-        The time at which `martingale_closure(data)` 
-        exceeds 1/alpha, and math.inf if that never
-        happens.
+    martingale_dict, dict of {string : function}
+        dictionary of various martingales where the key is a string (for the name of the martingale), and the values are univariate functions
+        that take KxS matrices (or np.arrays, or just lists of lists)
+        and produce an S-vector/list of martingale values. Here, K is
+        the number of categories, and S is the number of samples
+    data, array-like
+        array of the ones and zeros indicating votes for candidates
+        1 and 2, respectively
+    nsim, integer
+        number of simulations to perform
+    alpha, positive real
+        confidence level
+    title, string
+        title for the produced plot
+    num_proc, integer
+        Number of CPU processes to spawn. This should be less than or
+        equal to the number of CPU cores on the user's machine.
     '''
-    np.random.shuffle(data)
-    mart_value = mart_closure(data)
-    mart_value[-1] = math.inf
-    return np.where(mart_value > 1/alpha)[0][0]
+    N = np.sum(len(data))
+
+    # Get things ready for the plot
+    t = np.ones(N).cumsum()
+
+    stopping_times_dict = {}
+    # For each martingale, do a power simulation
+    for mart_name in martingale_dict:
+        mart_closure = martingale_dict[mart_name]
+
+        stopping_times = np.repeat(N, nsim)
+        def get_stopping_time(i):
+            np.random.shuffle(data)
+            mart_value = mart_closure(data)
+            mart_value[-1] = math.inf
+            return np.where(mart_value > 1/alpha)[0][0]
+        #stopping_times = np.array(list(map(get_stopping_time, range(nsim))))
+        with Pool(processes=num_proc) as pool:
+            stopping_times_dict[mart_name] =\
+                pool.map(get_stopping_time, range(nsim))
+
+    return stopping_times_dict
+
 
 def plot_stopping_time(martingale_dict, data,
                        nsim=1000, alpha=0.05, title='',
@@ -440,6 +462,7 @@ def plot_stopping_time(martingale_dict, data,
 
         sns.kdeplot(stopping_times, label=mart_name, bw='silverman')
         plt.xlabel("Stopping time")
+        plt.legend(loc='best')
 
 
 def plot_2party_election(x, n, N, BB_alpha, BB_beta, Tb_true, Tb_null,
