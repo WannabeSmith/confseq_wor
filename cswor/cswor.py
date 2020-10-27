@@ -405,8 +405,8 @@ def stopping_times(martingale_dict, data,
             np.random.shuffle(data)
             mart_value = mart_closure(data)
             mart_value[-1] = math.inf
+	    print('Completed simulation ' + str(i))
             return np.where(mart_value > 1/alpha)[0][0]
-        #stopping_times = np.array(list(map(get_stopping_time, range(nsim))))
         with Pool(processes=num_proc) as pool:
             stopping_times_dict[mart_name] =\
                 pool.map(get_stopping_time, range(nsim))
