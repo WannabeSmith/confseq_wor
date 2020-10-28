@@ -9,6 +9,7 @@ from utils import *
 from misc import *
 import multiprocessing as mp
 import seaborn as sns
+import time
 
 from multiprocess import Pool
 import multiprocess
@@ -368,7 +369,7 @@ def stopping_times(martingale_dict, data,
                    nsim=100, alpha=0.05,
                    num_proc=1):
     '''
-    Get stopping times 
+    Get stopping times and simulation times
 
     Parameters
     ----------
@@ -396,22 +397,33 @@ def stopping_times(martingale_dict, data,
     t = np.ones(N).cumsum()
 
     stopping_times_dict = {}
+    simulation_times_dict = {}
     # For each martingale, do a power simulation
     for mart_name in martingale_dict:
         mart_closure = martingale_dict[mart_name]
-
-        stopping_times = np.repeat(N, nsim)
         def get_stopping_time(i):
             np.random.shuffle(data)
+            start_time = time.time()
             mart_value = mart_closure(data)
+            end_time = time.time()
             mart_value[-1] = math.inf
-	    print('Completed simulation ' + str(i))
-            return np.where(mart_value > 1/alpha)[0][0]
+            print('Completed simulation ' + str(i))
+            stopping_time =\
+                np.where(mart_value > 1/alpha)[0][0]
+            simulation_time =\
+                end_time - start_time
+            return np.array((stopping_time,
+                             simulation_time))
         with Pool(processes=num_proc) as pool:
-            stopping_times_dict[mart_name] =\
-                pool.map(get_stopping_time, range(nsim))
+            results =\
+                np.array(pool.map(get_stopping_time,
+                                  range(nsim)))
+            print(results)
+            stopping_times_dict[mart_name] = results[:, 0]
+            simulation_times_dict[mart_name] =\
+                results[:, 1]
 
-    return stopping_times_dict
+    return stopping_times_dict, simulation_times_dict
 
 
 def plot_stopping_time(martingale_dict, data,
