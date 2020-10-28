@@ -407,7 +407,6 @@ def stopping_times(martingale_dict, data,
             mart_value = mart_closure(data)
             end_time = time.time()
             mart_value[-1] = math.inf
-            print('Completed simulation ' + str(i))
             stopping_time =\
                 np.where(mart_value > 1/alpha)[0][0]
             simulation_time =\
@@ -418,7 +417,6 @@ def stopping_times(martingale_dict, data,
             results =\
                 np.array(pool.map(get_stopping_time,
                                   range(nsim)))
-            print(results)
             stopping_times_dict[mart_name] = results[:, 0]
             simulation_times_dict[mart_name] =\
                 results[:, 1]
