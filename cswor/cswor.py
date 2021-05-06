@@ -367,7 +367,7 @@ def plot_power(martingale_dict, data, T_true,
 
 def stopping_times(martingale_dict, data,
                    nsim=100, alpha=0.05,
-                   num_proc=1):
+                   num_proc=1, multiple_of=1):
     '''
     Get stopping times and simulation times
 
@@ -396,32 +396,36 @@ def stopping_times(martingale_dict, data,
     # Get things ready for the plot
     t = np.ones(N).cumsum()
 
+    mart_names = list(martingale_dict.keys())
     stopping_times_dict = {}
     simulation_times_dict = {}
-    # For each martingale, do a power simulation
-    for mart_name in martingale_dict:
-        mart_closure = martingale_dict[mart_name]
-        def get_stopping_time(i):
-            np.random.shuffle(data)
-            start_time = time.time()
-            mart_value = mart_closure(data)
-            end_time = time.time()
-            mart_value[-1] = math.inf
-            stopping_time =\
-                np.where(mart_value > 1/alpha)[0][0]
-            simulation_time =\
-                end_time - start_time
-            return np.array((stopping_time,
-                             simulation_time))
-        with Pool(processes=num_proc) as pool:
-            results =\
-                np.array(pool.map(get_stopping_time,
-                                  range(nsim)))
-            stopping_times_dict[mart_name] = results[:, 0]
-            simulation_times_dict[mart_name] =\
-                results[:, 1]
 
-    return stopping_times_dict, simulation_times_dict
+    def get_stopping_times(i):
+        np.random.seed()
+        np.random.shuffle(data)
+        
+        result_array = np.array([])
+        for mart_name in mart_names:
+            mart_closure = martingale_dict[mart_name]
+            mart_value = mart_closure(data)
+            mart_value[-1] = math.inf
+            
+            stopping_time =\
+                np.where(np.logical_and(mart_value > 1/alpha,
+                                        t%multiple_of == 0))[0][0] + 1
+            result_array = np.append(result_array, stopping_time)
+        return result_array
+            
+    with Pool(processes=num_proc) as pool:
+        results =\
+            np.array(pool.map(get_stopping_times,
+                                range(nsim)))
+            
+    for j in range(len(mart_names)):
+        mart_name = mart_names[j]
+        stopping_times_dict[mart_name] = results[:, j]
+                
+    return stopping_times_dict
 
 
 def plot_stopping_time(martingale_dict, data,
